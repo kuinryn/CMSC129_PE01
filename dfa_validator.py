@@ -170,7 +170,7 @@ class DFAApp(tk.Tk):
         super().__init__()
         self.title("PE01 - Strings and DFA")
         self.geometry("900x600")
-        self.minsize(760, 520)
+        self.minsize(760, 420)
 
         # State kept by the app
         self.dfa = None                 # last SUCCESSFULLY loaded DFA
@@ -183,54 +183,63 @@ class DFAApp(tk.Tk):
     # ---------------- UI construction ----------------
 
     def _build_ui(self):
-        toolbar = ttk.Frame(self, padding=8)
+        toolbar = ttk.Frame(self, padding=(28, 20, 28, 14))
         toolbar.pack(side="top", fill="x")
+        toolbar.columnconfigure(0, weight=2)
+        toolbar.columnconfigure(1, weight=1)
 
-        ttk.Button(toolbar, text="Load File", command=self.on_load_file).pack(side="left", padx=(0, 8))
+        ttk.Button(toolbar, text="Load File", command=self.on_load_file).grid(
+            row=0, column=0, sticky="ew", padx=(0, 24)
+        )
         self.process_btn = ttk.Button(toolbar, text="Process", command=self.on_process, state="disabled")
-        self.process_btn.pack(side="left")
+        self.process_btn.grid(row=0, column=1, sticky="ew")
 
-        main_area = ttk.Frame(self, padding=(8, 0, 8, 8))
-        main_area.pack(side="top", fill="both", expand=True)
-        main_area.columnconfigure(0, weight=1)
-        main_area.columnconfigure(1, weight=1)
-        main_area.rowconfigure(0, weight=1)
+        content = ttk.Frame(self, padding=(28, 0, 28, 12))
+        content.pack(side="top", fill="both", expand=True)
+        content.columnconfigure(0, weight=3)
+        content.columnconfigure(1, weight=4)
+        content.columnconfigure(2, weight=4)
+        content.rowconfigure(0, weight=1)
 
-        # --- Transition table (left) ---
-        table_frame = ttk.LabelFrame(main_area, text="Transition table", padding=6)
-        table_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        table_frame = ttk.LabelFrame(content, text="Transition table", padding=8)
+        table_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
 
-        self.table = ttk.Treeview(table_frame, columns=("state", "sym0", "sym1"), show="headings", height=10)
-        self.table.heading("state", text="State")
-        self.table.heading("sym0", text="0")
-        self.table.heading("sym1", text="1")
-        self.table.column("state", width=90, anchor="center")
-        self.table.column("sym0", width=90, anchor="center")
-        self.table.column("sym1", width=90, anchor="center")
-        self.table.pack(fill="both", expand=True)
+        self.table = ttk.Treeview(
+            table_frame, columns=("marker", "state", "sym0", "sym1"), show="headings", height=8
+        )
+        for column, title, width in (
+            ("marker", "", 24),
+            ("state", "State", 62),
+            ("sym0", "0", 48),
+            ("sym1", "1", 48),
+        ):
+            self.table.heading(column, text=title)
+            self.table.column(column, width=width, minwidth=width, anchor="center", stretch=False)
+        self.table.grid(row=0, column=0, sticky="nsew")
 
-        # --- Input / Output (right) ---
-        io_frame = ttk.Frame(main_area)
-        io_frame.grid(row=0, column=1, sticky="nsew")
-        io_frame.rowconfigure(0, weight=1)
-        io_frame.rowconfigure(1, weight=1)
-        io_frame.columnconfigure(0, weight=1)
+        input_frame = ttk.LabelFrame(content, text="Input", padding=8)
+        input_frame.grid(row=0, column=1, sticky="nsew", padx=8)
+        input_frame.rowconfigure(0, weight=1)
+        input_frame.columnconfigure(0, weight=1)
+        self.input_text = tk.Text(input_frame, wrap="none", state="disabled", height=8, width=18)
+        self.input_text.grid(row=0, column=0, sticky="nsew")
 
-        input_frame = ttk.LabelFrame(io_frame, text="Input", padding=6)
-        input_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 6))
-        self.input_text = tk.Text(input_frame, wrap="none", state="disabled")
-        self.input_text.pack(fill="both", expand=True)
+        output_frame = ttk.LabelFrame(content, text="Output", padding=8)
+        output_frame.grid(row=0, column=2, sticky="nsew", padx=(8, 0))
+        output_frame.rowconfigure(0, weight=1)
+        output_frame.columnconfigure(0, weight=1)
+        self.output_text = tk.Text(output_frame, wrap="none", state="disabled", height=8, width=18)
+        self.output_text.grid(row=0, column=0, sticky="nsew")
 
-        output_frame = ttk.LabelFrame(io_frame, text="Output", padding=6)
-        output_frame.grid(row=1, column=0, sticky="nsew")
-        self.output_text = tk.Text(output_frame, wrap="none", state="disabled")
-        self.output_text.pack(fill="both", expand=True)
-
-        # --- Status bar ---
-        status_frame = ttk.Frame(self, padding=(8, 4))
-        status_frame.pack(side="bottom", fill="x")
+        status = ttk.Frame(self, padding=(28, 4, 28, 20))
+        status.pack(side="bottom", fill="x")
         self.status_var = tk.StringVar(value="Ready. Load a .dfa file and a .in file to begin.")
-        ttk.Label(status_frame, textvariable=self.status_var, anchor="w").pack(fill="x")
+        ttk.Label(status, text="STATUS:", font=("TkDefaultFont", 10, "bold")).pack(side="left")
+        ttk.Label(status, textvariable=self.status_var, anchor="w").pack(
+            side="left", padx=(14, 0), fill="x", expand=True
+        )
 
     # ---------------- Button handlers ----------------
 
@@ -277,7 +286,7 @@ class DFAApp(tk.Tk):
             self.dfa_filename = filename
             self._render_table()
             self.status_var.set(f"DFA table from {filename} has been successfully loaded.")
-        except DFAFormatError as exc:
+        except (DFAFormatError, OSError, UnicodeError) as exc:
             if self.dfa is not None:
                 self.status_var.set(
                     f"Unable to load content from {filename} due to invalid content. "
@@ -323,7 +332,10 @@ class DFAApp(tk.Tk):
                 label = f"+ {state}"
             else:
                 label = state
-            self.table.insert("", "end", values=(label, row[self.dfa.alphabet[0]], row[self.dfa.alphabet[1]]))
+            marker, state_label = label.split(" ", 1) if " " in label else ("", label)
+            self.table.insert(
+                "", "end", values=(marker, state_label, row[self.dfa.alphabet[0]], row[self.dfa.alphabet[1]])
+            )
 
     def _render_input(self):
         self.input_text.configure(state="normal")
